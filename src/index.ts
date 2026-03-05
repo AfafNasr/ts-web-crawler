@@ -1,4 +1,5 @@
 import { crawlPage } from './crawl.js'
+import { crawlSiteAsync } from './crawl.js'
 
 async function main() {
   const args = process.argv.slice(2)
@@ -9,15 +10,11 @@ async function main() {
   }
 
   const baseURL = args[0]
+  const pages = await crawlSiteAsync(baseURL, 5)
 
-  console.log(`starting crawl of ${baseURL}`)
-  
-  const pages = await crawlPage(baseURL, baseURL, {})
+  console.log("Results:", pages)
 
-  console.log("---------- CRAWL RESULTS ----------")
-  for (const page in pages) {
-    console.log(`${page}: ${pages[page]}`)
-  }
+
 }
 
 main()

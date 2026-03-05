@@ -1,4 +1,7 @@
 import { JSDOM } from 'jsdom'
+import pLimit from 'p-limit'
+import { getURLsFromHTML } from './crawl_utils.js'
+
 
 export interface ExtractedPageData {
   url: string
@@ -8,6 +11,79 @@ export interface ExtractedPageData {
   image_urls: string[]
 }
 
+export class ConcurrentCrawler {
+  baseURL: string
+  pages: Record<string, number>
+  limit: any 
+
+  constructor(baseURL: string, maxConcurrency: number) {
+    this.baseURL = baseURL
+    this.pages = {}
+    this.limit = pLimit(maxConcurrency)
+  }
+
+  private addPageVisit(normalizedURL: string): boolean {
+    if (this.pages[normalizedURL] > 0) {
+      this.pages[normalizedURL]++
+      return false 
+    }
+    this.pages[normalizedURL] = 1
+    return true 
+  }
+
+  private async getHTML(currentURL: string): Promise<string> {
+    return await this.limit(async () => {
+      try {
+        console.log(`fetching: ${currentURL}`)
+        const response = await fetch(currentURL, {
+          headers: { 'User-Agent': 'BootCrawler/1.0' }
+        })
+        
+        if (response.status >= 400) {
+          console.error(`Status error: ${response.status}`)
+          return ""
+        }
+
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('text/html')) {
+          return ""
+        }
+
+        return await response.text()
+      } catch (err) {
+        console.error(`Fetch error: ${err}`)
+        return ""
+      }
+    })
+  }
+
+  private async crawlPage(currentURL: string): Promise<void> {
+    const baseHost = new URL(this.baseURL).hostname
+    const currentHost = new URL(currentURL).hostname
+    if (baseHost !== currentHost) return
+
+    const normalized = currentURL 
+    if (!this.addPageVisit(normalized)) return
+
+    const html = await this.getHTML(currentURL)
+    if (!html) return
+
+    const nextURLs = getURLsFromHTML(html, this.baseURL)
+
+    const promises = nextURLs.map(url => this.crawlPage(url))
+    await Promise.all(promises)
+  }
+
+  async crawl() {
+    await this.crawlPage(this.baseURL)
+    return this.pages
+  }
+}
+
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number) {
+  const crawler = new ConcurrentCrawler(baseURL, maxConcurrency)
+  return await crawler.crawl()
+}
 export function normalizeURL(urlString: string): string {
     const urlObj = new URL(urlString)
     let fullPath = `${urlObj.hostname}${urlObj.pathname}`

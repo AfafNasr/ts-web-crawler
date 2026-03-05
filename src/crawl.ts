@@ -14,33 +14,45 @@ export interface ExtractedPageData {
 export class ConcurrentCrawler {
   baseURL: string
   pages: Record<string, number>
-  limit: any 
+  limit: any
+  maxPages: number
+  shouldStop: boolean = false
+  allTasks: Set<Promise<void>> = new Set()
 
-  constructor(baseURL: string, maxConcurrency: number) {
+  constructor(baseURL: string, maxConcurrency: number, maxPages: number) {
     this.baseURL = baseURL
+    this.maxPages = maxPages
     this.pages = {}
     this.limit = pLimit(maxConcurrency)
   }
 
   private addPageVisit(normalizedURL: string): boolean {
-    if (this.pages[normalizedURL] > 0) {
+    if (this.shouldStop) return false
+
+    if (this.pages[normalizedURL] !== undefined) {
       this.pages[normalizedURL]++
-      return false 
+      return false
     }
+
+    if (Object.keys(this.pages).length >= this.maxPages) {
+      this.shouldStop = true
+      console.log(`Reached maximum number of pages to crawl: ${this.maxPages}`)
+      return false
+    }
+
     this.pages[normalizedURL] = 1
-    return true 
+    return true
   }
 
   private async getHTML(currentURL: string): Promise<string> {
     return await this.limit(async () => {
       try {
-        console.log(`fetching: ${currentURL}`)
         const response = await fetch(currentURL, {
           headers: { 'User-Agent': 'BootCrawler/1.0' }
         })
-        
+
         if (response.status >= 400) {
-          console.error(`Status error: ${response.status}`)
+          console.log(`Error fetching ${currentURL}: ${response.status}`)
           return ""
         }
 
@@ -51,39 +63,51 @@ export class ConcurrentCrawler {
 
         return await response.text()
       } catch (err) {
-        console.error(`Fetch error: ${err}`)
+        console.log(`Error fetching ${currentURL}: ${err}`)
         return ""
       }
     })
   }
 
   private async crawlPage(currentURL: string): Promise<void> {
+    if (this.shouldStop) return
+
     const baseHost = new URL(this.baseURL).hostname
     const currentHost = new URL(currentURL).hostname
     if (baseHost !== currentHost) return
 
-    const normalized = currentURL 
+    const normalized = normalizeURL(currentURL)
     if (!this.addPageVisit(normalized)) return
+
+    console.log(`actively crawling: ${currentURL}`)
 
     const html = await this.getHTML(currentURL)
     if (!html) return
 
     const nextURLs = getURLsFromHTML(html, this.baseURL)
 
-    const promises = nextURLs.map(url => this.crawlPage(url))
-    await Promise.all(promises)
+    for (const nextURL of nextURLs) {
+      const promise = this.crawlPage(nextURL)
+      this.allTasks.add(promise)
+      promise.finally(() => this.allTasks.delete(promise))
+    }
   }
 
   async crawl() {
     await this.crawlPage(this.baseURL)
+
+    while (this.allTasks.size > 0) {
+      await Promise.all(Array.from(this.allTasks))
+    }
     return this.pages
   }
 }
 
-export async function crawlSiteAsync(baseURL: string, maxConcurrency: number) {
-  const crawler = new ConcurrentCrawler(baseURL, maxConcurrency)
+export async function crawlSiteAsync(baseURL: string, maxConcurrency: number, maxPages: number) {
+  const crawler = new ConcurrentCrawler(baseURL, maxConcurrency, maxPages)
   return await crawler.crawl()
 }
+
 export function normalizeURL(urlString: string): string {
     const urlObj = new URL(urlString)
     let fullPath = `${urlObj.hostname}${urlObj.pathname}`

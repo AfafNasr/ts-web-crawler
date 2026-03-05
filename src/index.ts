@@ -16,10 +16,20 @@ async function main() {
     console.log(`Starting crawl at ${baseURL} with concurrency ${maxConcurrency} and limit ${maxPages}`)
 
     const pages = await crawlSiteAsync(baseURL, maxConcurrency, maxPages)
+    console.log("Finished crawling.")
 
-    console.log("---------- REPORT ----------")
-    for (const page in pages) {
-        console.log(`Found ${pages[page]} internal links to ${page}`)
+    const firstPage = Object.values(pages)[0]
+
+    if (firstPage) {
+    console.log(`First page record: ${firstPage["url"]} - ${firstPage["heading"]}`)
     }
+ console.log("---------- FINAL REPORT ----------")
+for (const url in pages) {
+    const pageData = pages[url]
+    console.log(`URL: ${url}`)
+    console.log(`- Title: ${pageData.heading}`)
+    console.log(`- Links found on this page: ${pageData.outgoing_links.length}`)
+    console.log("----------------------------------")
+}    
 }
 main()

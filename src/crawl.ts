@@ -98,26 +98,25 @@ export async function getHTML(url: string): Promise<string | undefined> {
         const response = await fetch(url, {
             method: 'GET',
             headers: {
-                'User-Agent': 'BootCrawler/1.0'
+                'User-Agent': 'BootCrawler/1.0',
+                'Accept': 'text/html' 
             }
         })
 
         if (response.status >= 400) {
-            console.error(`HTTP Error: ${response.status} ${response.statusText} on URL: ${url}`)
+            console.log(`Error: HTTP status ${response.status}`)
             return
         }
 
         const contentType = response.headers.get('content-type')
         if (!contentType || !contentType.includes('text/html')) {
-            console.error(`Non-HTML response: ${contentType} on URL: ${url}`)
+            console.log(`Error: Content-Type is ${contentType}`)
             return
         }
 
-        const htmlBody = await response.text()
-        return htmlBody
-
+        return await response.text()
     } catch (err) {
-        console.error(`Network error: ${err instanceof Error ? err.message : err}`)
+        console.log(`Error: ${err instanceof Error ? err.message : err}`)
         return
     }
 }

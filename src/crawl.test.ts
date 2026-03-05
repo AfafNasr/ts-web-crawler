@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { normalizeURL, getHeadingFromHTML, getFirstParagraphFromHTML } from './crawl'
+import { normalizeURL, getHeadingFromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML } from './crawl'
 
 test('normalizeURL strip protocol', () => {
     const input = 'https://blog.boot.dev/path'
@@ -60,4 +60,49 @@ test('getFirstParagraphFromHTML fallback to any p', () => {
 test('getFirstParagraphFromHTML empty if none', () => {
     const input = '<html><body><div>No p tags</div></body></html>'
     expect(getFirstParagraphFromHTML(input)).toBe('')
+})
+
+
+test('getURLsFromHTML absolute', () => {
+    const inputURL = "https://blog.boot.dev"
+    const inputBody = '<html><body><a href="https://blog.boot.dev/path/"><span>Test</span></a></body></html>'
+    const actual = getURLsFromHTML(inputBody, inputURL)
+    const expected = ["https://blog.boot.dev/path/"]
+    expect(actual).toEqual(expected)
+})
+
+test('getURLsFromHTML relative', () => {
+    const inputURL = "https://blog.boot.dev"
+    const inputBody = '<html><body><a href="/path/"><span>Test</span></a></body></html>'
+    const actual = getURLsFromHTML(inputBody, inputURL)
+    const expected = ["https://blog.boot.dev/path/"]
+    expect(actual).toEqual(expected)
+})
+
+test('getURLsFromHTML both', () => {
+    const inputURL = "https://blog.boot.dev"
+    const inputBody = `
+    <html><body>
+        <a href="https://blog.boot.dev/abs/">Abs</a>
+        <a href="/rel/">Rel</a>
+    </body></html>`
+    const actual = getURLsFromHTML(inputBody, inputURL)
+    const expected = ["https://blog.boot.dev/abs/", "https://blog.boot.dev/rel/"]
+    expect(actual).toEqual(expected)
+})
+
+test('getImagesFromHTML absolute', () => {
+    const inputURL = "https://blog.boot.dev"
+    const inputBody = '<html><body><img src="https://blog.boot.dev/logo.png" /></body></html>'
+    const actual = getImagesFromHTML(inputBody, inputURL)
+    const expected = ["https://blog.boot.dev/logo.png"]
+    expect(actual).toEqual(expected)
+})
+
+test('getImagesFromHTML relative', () => {
+    const inputURL = "https://blog.boot.dev"
+    const inputBody = '<html><body><img src="/logo.png" /></body></html>'
+    const actual = getImagesFromHTML(inputBody, inputURL)
+    const expected = ["https://blog.boot.dev/logo.png"]
+    expect(actual).toEqual(expected)
 })

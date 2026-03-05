@@ -36,3 +36,41 @@ export function getFirstParagraphFromHTML(html: string): string {
     }
     return ""
 }
+
+export function getURLsFromHTML(html: string, baseURL: string): string[] {
+    const urls: string[] = []
+    const dom = new JSDOM(html)
+    const linkElements = dom.window.document.querySelectorAll('a')
+
+    for (const linkElement of linkElements) {
+        if (linkElement.hasAttribute('href')) {
+            const href = linkElement.getAttribute('href')
+            try {
+                const urlObj = new URL(href!, baseURL)
+                urls.push(urlObj.href)
+            } catch (err) {
+                console.log(`error with invalid url: ${err instanceof Error ? err.message : err}`)
+            }
+        }
+    }
+    return urls
+}
+
+export function getImagesFromHTML(html: string, baseURL: string): string[] {
+    const images: string[] = []
+    const dom = new JSDOM(html)
+    const imgElements = dom.window.document.querySelectorAll('img')
+
+    for (const imgElement of imgElements) {
+        if (imgElement.hasAttribute('src')) {
+            const src = imgElement.getAttribute('src')
+            try {
+                const urlObj = new URL(src!, baseURL)
+                images.push(urlObj.href)
+            } catch (err) {
+                console.log(`error with invalid img url: ${err instanceof Error ? err.message : err}`)
+            }
+        }
+    }
+    return images
+}

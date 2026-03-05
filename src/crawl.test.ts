@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest'
-import { normalizeURL, getHeadingFromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML } from './crawl'
+import { normalizeURL, getHeadingFromHTML, getFirstParagraphFromHTML, getURLsFromHTML, getImagesFromHTML, extractPageData } from './crawl'
 
 test('normalizeURL strip protocol', () => {
     const input = 'https://blog.boot.dev/path'

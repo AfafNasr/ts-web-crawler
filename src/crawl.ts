@@ -92,3 +92,32 @@ export function extractPageData(html: string, pageURL: string): ExtractedPageDat
     image_urls: getImagesFromHTML(html, pageURL)
   }
 }
+
+export async function getHTML(url: string): Promise<string | undefined> {
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'User-Agent': 'BootCrawler/1.0'
+            }
+        })
+
+        if (response.status >= 400) {
+            console.error(`HTTP Error: ${response.status} ${response.statusText} on URL: ${url}`)
+            return
+        }
+
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('text/html')) {
+            console.error(`Non-HTML response: ${contentType} on URL: ${url}`)
+            return
+        }
+
+        const htmlBody = await response.text()
+        return htmlBody
+
+    } catch (err) {
+        console.error(`Network error: ${err instanceof Error ? err.message : err}`)
+        return
+    }
+}

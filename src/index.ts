@@ -1,21 +1,23 @@
-import { getHTML } from './crawl.js'
+import { crawlPage } from './crawl.js'
 
 async function main() {
-    const args = process.argv.slice(2)
+  const args = process.argv.slice(2)
 
-    if (args.length !== 1) {
-        console.error("Usage: npm run start <URL>")
-        process.exit(1)
-    }
+  if (args.length !== 1) {
+    console.log("no website provided")
+    process.exit(1)
+  }
 
-    const baseURL = args[0]
-    
-    const html = await getHTML(baseURL)
+  const baseURL = args[0]
 
-    if (html) {
-        console.log(html)
-    } 
-    
+  console.log(`starting crawl of ${baseURL}`)
+  
+  const pages = await crawlPage(baseURL, baseURL, {})
+
+  console.log("---------- CRAWL RESULTS ----------")
+  for (const page in pages) {
+    console.log(`${page}: ${pages[page]}`)
+  }
 }
 
 main()

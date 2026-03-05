@@ -120,3 +120,45 @@ export async function getHTML(url: string): Promise<string | undefined> {
         return
     }
 }
+
+export async function crawlPage(
+  baseURL: string,
+  currentURL: string = baseURL,
+  pages: Record<string, number> = {}
+): Promise<Record<string, number>> {
+  
+  const baseURLObj = new URL(baseURL)
+  const currentURLObj = new URL(currentURL)
+  if (baseURLObj.hostname !== currentURLObj.hostname) {
+    return pages
+  }
+
+  const normalizedCurrentURL = normalizeURL(currentURL)
+
+  if (pages[normalizedCurrentURL] > 0) {
+    pages[normalizedCurrentURL]++
+    return pages
+  }
+
+  pages[normalizedCurrentURL] = 1
+
+  console.log(`actively crawling: ${currentURL}`)
+
+  try {
+    const htmlBody = await getHTML(currentURL)
+    if (!htmlBody) {
+        return pages
+    }
+
+    const nextURLs = getURLsFromHTML(htmlBody, baseURL)
+
+    for (const nextURL of nextURLs) {
+      pages = await crawlPage(baseURL, nextURL, pages)
+    }
+    
+  } catch (err) {
+    console.log(`error in crawlPage: ${err instanceof Error ? err.message : err}`)
+  }
+
+  return pages
+}
